@@ -53,7 +53,7 @@ cerrado_class <- sits_cube(
     collection = "LANDSAT-OLI-16D",
     data_dir = "./inst/extdata/cerrado_class_120m/",
     labels = labels,
-    version = "r_60m",
+    version = "r-120m",
     bands = "class"
 )
 
@@ -98,6 +98,17 @@ mae_model <- sits_pre_train(
         mask_ratio = 0.5
     )
 )
+
+cerrado_samples_emb <- sits_encode(
+    data = samples_ssl_ts,
+    encoder = mae_model,
+    multicores = 8,
+    gpu_memory = 16,
+    batch_size = 2^16
+)
+
+saveRDS(cerrado_samples_emb, "~/sitsfm/inst/extdata/cerrado_samples/samples-cer-v13a-emb.rds")
+
 cerrado_embeddings_2017_2018 <- sits_encode(
     data = bdc_cerrado_reg,
     encoder = mae_model,
@@ -109,16 +120,13 @@ cerrado_embeddings_2017_2018 <- sits_encode(
 
 cerrado_samples <- readRDS("~/sitsfm/inst/extdata/cerrado_samples/samples-cer-v13a.rds")
 
-cerrado_samples_emb <- sits_encode(
-    data = cerrado_samples,
-    encoder = mae_model,
-    memsize = 32,
-    multicores = 4,
-    gpu_memory = 16,
-    batch_size = 2^18
+cerrado_embeddings_2017_2018 <- sits_cube(
+    source = "BDC",
+    collection = "LANDSAT-OLI-16D",
+    data_dir = "/Volumes/KINGSTON/sitsfm/cerrado_emb_2017_2018/"
 )
+plot(cerrado_embeddings_2017_2018, tile = "017004", red = "E2", green = "E1", blue = "E3")
 
-saveRDS(cerrado_samples_emb, "~/sitsfm/inst/extdata/cerrado_samples/samples-cer-v13a-emb.rds")
 
 emb_rfor_model <- sits_train(
     samples =  cerrado_samples_emb,
@@ -153,10 +161,4 @@ cube_emb_015009_class <- sits_label_classification(
     version = "rfor"
 )
 
-cerrado_embeddings_2017_2018 <- sits_cube(
-    source = "BDC",
-    collection = "LANDSAT-OLI-16D",
-    data_dir = "/Volumes/KINGSTON/sitsfm/cerrado_emb_2017_2018/"
-)
-plot(cerrado_embeddings_2017_2018, tile = "017004", red = "E2", green = "E1", blue = "E3")
 
