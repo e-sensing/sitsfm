@@ -1,3 +1,7 @@
+# Created by https://www.toptal.com/developers/gitignore/api/r
+# Edit at https://www.toptal.com/developers/gitignore?templates=r
+
+### R ###
 # History files
 .Rhistory
 .Rapp.history
@@ -47,3 +51,15 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+### R.Bookdown Stack ###
+# R package: bookdown caching files
+/*_files/
+
+# End of https://www.toptal.com/developers/gitignore/api/r
+#
+# local directories
+#
+data/embeddings
+data/encoders
+#

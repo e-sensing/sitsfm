@@ -1,0 +1,17 @@
+Package: sitsfm
+Type: Package
+Title: Generate and test EO foundational models for time series
+Version: 0.1.0
+Authors@R: c(
+    person(
+      "Gilberto", "Camara",
+      email = "gilberto.camara.inpe@@gmail.com",
+      role = c("aut", "cre")
+    )
+  )
+Description: This package evaluates foundational models for satellite image time series. 
+  It compares three self-supervised encoders (masked autoencoders, LeJEPA, VICReg) and
+  two supervised encoders (Barlow Twins, Supervised Constrastive Learning).
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
