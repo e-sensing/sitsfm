@@ -4,9 +4,14 @@ library(sits)
 #
 #  1. Load the embeddings cube
 #
+#
+vicreg_cube_2018_dir <- "./data/embeddings/embeddings/vicreg/emb_2018"
+dir.create(vicreg_cube_2018_dir)
+#
 vicreg_cube_2018 <- sits_from_hf(
     repo = "e-sensing/cerrado_emb_ssl_vicreg_tcnn_2018",
-    type = "dataset"
+    type = "dataset",
+    output_dir = vicreg_cube_2018_dir
 )
 #
 # 2. Get VICReg encoder
