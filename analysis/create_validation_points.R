@@ -1,118 +1,52 @@
-# Prepare validation data
 #
-# Base directory for data access
-# Replace as appropriate for reproducibility
+# Create validation data for 2018 evaluation
 #
-base_dir <- "/Volumes/KINGSTON/sitsfm/"
 
-# BDC tiles for classification evaluation
-tiles_bdc <- c(
-    "017004", "015005", "015006",
-    "015007", "014008", "015009",
-    "009010", "013010", "013012",
-    "014012", "011013", "013014"
-)
-# Labels for consensus natural classes
-
-labels_natural <- c(
-    "0" = "Anthropic",
-    "2" = "Cerradao",
-    "3" = "Cerrado",
-    "4" = "Mangrove",
-    "5" = "Nat_NonVeg",
-    "6" = "Open_Cerrado"
-)
-
-natural_dir <- "cerrado_lucc_natural/cerrado_lucc_natural_tiles"
-# consensus cube with natural classes only
-cerrado_natural_cube <- sits_cube(
-    source = "BDC",
-    collection = "LANDSAT-OLI-16D",
-    data_dir = file.path(base_dir, natural_dir),
-    labels = labels_natural,
-    bands = "class",
-    version = "natural",
-    multicores = 6,
-    memsize = 12
-)
-# get samples for TerraClass
-# get class labels
-labels_tc <- c(
-    "1"  = "Natural Vegetation",
-    "2"  = "Secondary Vegetation",
-    "9"  = "Silviculture",
-    "11" = "Pasture",
-    "12" = "Perennial_Crop",
-    "13" = "Sugarcane",
-    "14" = "Annual_Crop_1_Cycle",
-    "15" = "Annual_Crop_2_Cycles",
-    "16" = "Mining",
-    "17" = "Urban_Area",
-    "20" = "Other Uses",
-    "21" = "Other Built-up Areas",
-    "22" = "Deforestation",
-    "23" = "Water Bodies",
-    "25" = "Not Observed"
-)
-
-# produce a new data cube only for the selected tiles
-terra_class_dir <- "terra_class/terra_class_2018_boundary_tiles"
-# retrieve terra class 2018
 #
-terra_class_2018 <- sits_cube(
-    source = "BDC",
-    collection = "SENTINEL-2-16D",
-    data_dir = file.path(base_dir, terra_class_dir),
-    labels = labels_tc,
-    bands = "class",
-    version = "30m",
-    multicores = 6,
-    memsize = 12
+# Recover consensus data for natural classes from Hugging Face
+#
+natural_dir <- "./data/cubes/cerrado_natural"
+dir.create(natural_dir, recursive = TRUE)
+#
+# Consensus cube with natural classes only
+#
+cerrado_natural_cube <- sits_from_hf(
+    repo = "e-sensing/cerrado_lucc_natural_tiles",
+    output_dir = natural_dir
 )
-pasture_map <- terra::vect(file.path(base_dir,"/pasture/", "brasil_pasture_col9_s100_year=2018.gpkg"))
-pasture_tiles_dir <- "/pasture/pasture_tiles_2018"
-spat_vec_lst <- purrr::map(tiles_bdc, function(tile){
-    terra_rast <- sits_as_terra(terra_class_2024, tile = tile)
-    ext <- terra::ext(terra_rast)
-    pasture_map_ext <- terra::project(ext, from = terra::crs(terra_rast),
-                                      to = terra::crs(pasture_map)
-    )
-    crop_tile <- terra::crop(pasture_map, pasture_map_ext)
-    crop_tile_proj <- terra::project(crop_tile, terra::crs(terra_rast))
-    crop_tile_proj$label <- 11
-    crop_rast <- terra::rasterize(
-        x = crop_tile_proj,
-        y = terra_rast,
-        field = "label",
-        filename = file.path(
-            base_dir,
-            pasture_tiles_dir,
-            paste0("LANDSAT_OLI_",tile,"_2018-01-01_2018-12-31_class_pasture.tif")),
-        wopt = list(
-            datatype = "INT1U",
-            gdal = c("COMPRESS=LZW", "PREDICTOR=2",
-                     "TILED=YES", "BLOCKXSIZE=512",
-                     "BLOCKYSIZE=512")
-        )
-    )
-})
-
-labels_pasture <- c(
-    "0" = "Non_Pasture",
-    "11" = "Pasture"
+#
+# retrieve TerraClass 2018 (no boundaries) from Hugging Face
+#
+terra_class_dir <- "./data/cubes/terra_class_2018"
+dir.create(terra_class_dir, recursive = TRUE)
+#
+terra_class_2018 <- sits_from_hf(
+    repo = "e-sensing/cerrado_terra_class_2018_boundary_tiles",
+    type = "dataset",
+    output_dir = terra_class_dir
 )
-pasture_tiles_dir <- "/pasture/pasture_tiles_2018"
-pasture_cube <- sits_cube(
-    source = "BDC",
-    collection = "LANDSAT-OLI-16D",
-    data_dir  = file.path(base_dir, pasture_tiles_dir),
-    labels = labels_pasture,
-    bands = "class",
-    version = "pasture",
-    multicores = 6,
-    memsize = 12
+#
+# retrieve Pasture 2018 (no boundaries) from Hugging Face
+#
+# create directory
+pasture_dir <- "./data/cubes/pasture_2018"
+dir.create(pasture_dir, recursive = TRUE)
+#
+# retrieve cube
+#
+pasture_cube <- sits_from_hf(
+    repo = "e-sensing/cerrado_pasture_tiles_2018",
+    type = "dataset",
+    output_dir = "./data/cubes/pasture_2018"
 )
-tc_tiles_boundary_pasture_dir <- "terra_class/terra_class_2018_boundary_tiles_pasture"
+#
+# Reclassify TerraClass 2018 to match pasture data
+#
+tc_pasture_dir <- "./data/cubes/terra_class_2018_pasture"
+dir.create(tc_pasture_dir, recursive = TRUE)
+#
+# Reclassify
+#
 terra_class_2018_tiles_pasture <- sits_reclassify(
     cube = terra_class_2018,
     mask = pasture_cube,
@@ -124,12 +58,19 @@ terra_class_2018_tiles_pasture <- sits_reclassify(
             ),
         "Not Observed" = !mask %in% c("Pasture") & cube %in% c("Pasture")
     ),
-    output_dir = file.path(base_dir, tc_tiles_boundary_pasture_dir),
+    output_dir = tc_pasture_dir,
     multicores = 6,
     memsize = 12
 )
-tc_tiles_boundary_natural_dir <- "terra_class/terra_class_2018_boundary_tiles_pasture_natural"
-terra_class_2018_pasture_natural <- sits_reclassify(
+#
+#  Join TerraClass/Pasture with Natural classes
+#
+tc_2018_pasture_natural_dir <- "./data/cubes/tc_2018_pasture_natural"
+dir.create(tc_2018_pasture_natural_dir, recursive = TRUE)
+#
+#
+#
+tc_2018_pasture_natural <- sits_reclassify(
     cube = terra_class_2018_tiles_pasture,
     mask = cerrado_natural_cube,
     rules = list(
@@ -144,13 +85,13 @@ terra_class_2018_pasture_natural <- sits_reclassify(
         "Mangrove"   = mask %in% c("Mangrove") &
             cube %in% c("Natural Vegetation", "Secondary Vegetation")
     ),
-    output_dir = file.path(base_dir, tc_tiles_boundary_natural_dir),
+    output_dir = tc_2018_pasture_natural_dir,
     multicores = 6,
     memsize = 12
 )
 # sampling desing
 cerrado_sampling_design <- sits_sampling_design(
-    cube = terra_class_2018_pasture_natural,
+    cube = tc_2018_pasture_natural,
     expected_ua = c(
         "Cerradao" = 0.7,
         "Cerrado" = 0.7,
@@ -183,7 +124,7 @@ samples_per_class <- c(
 )
 # get validation data for land use classes
 samples_bench <- sits_stratified_sampling(
-    cube = terra_class_2018_pasture_natural,
+    cube = tc_2018_pasture_natural,
     samples_per_class = samples_per_class,
     overhead = 1.0,
     multicores = 8,
@@ -204,4 +145,7 @@ validation_data <- validation_data |>
 # visualise validation data
 sits_view(validation_data)
 
-sits_to_parquet(validation_data, "~/hugging_face/samples_cerrado/validation_data_2018.parquet")
+# save validation data
+validation_dir <- "./data/validation"
+dir.create(validation_dir, recursive = TRUE)
+sits_to_parquet(validation_data, "./data/validation/validation_data_2018.parquet")

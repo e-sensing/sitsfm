@@ -62,4 +62,6 @@ rsconnect/
 #
 data/embeddings
 data/encoders
+data/results
+data/cubes
 #
