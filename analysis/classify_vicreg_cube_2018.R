@@ -19,7 +19,7 @@ vicreg_cube_2018 <- sits_from_hf(
 vicreg_encoder <- sits_from_hf(
     repo = "e-sensing/encoders_cerrado",
     file = "ssl_vicreg_tcnn_model_2017_2024.rds",
-    type = "dataset"
+    type = "model"
 )
 #
 # 3. Load the samples
@@ -121,7 +121,7 @@ results <- purrr::map(fractions, function(frac){
         validation = validation_data,
         method = "pixel"
     )
-    acc$name <- "VICReg_01"
+    acc$name <- paste0("VICReg_", round(frac,2))
     # include accuracy in results list
     acc
 }
